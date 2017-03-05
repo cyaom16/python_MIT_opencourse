@@ -1,7 +1,34 @@
-# 6.0001/6.00 Problem Set 5 - RSS Feed Filter
-# Name:
-# Collaborators:
-# Time:
+#
+#           .a,s=||+|"|"|+|||<=s_a,>,            .aaaass_a_s,s=i=ii_a_a,,.
+#          .m`                     --"?g.    s%"!"~-.                   {a.
+#         .v}                         .3p   .m`                         .X;
+#         .m`          ._wwyywa,.      )W,=_sW.     _awqmXqwa.           Ii
+#         :#.    _.  .wZTWW#  ~?Va.    <WQQQQW;   .d!^9B?   "?>         .<1.
+#         =Z.     "???^  -~      ~     )QWQQQQo.                         <1
+#         =Z.                         .dZ^^^^"W,                        .v>
+#         :m.                         =W~     )q.                       .m`
+#         .U;                        .mY       ?o.                      =X .
+#          +w.                      .gT         Ya.                    .q:
+#           ?s.                    sm!           "q,.              .__av^
+#            -"!"!+|=i_s_s_a_s=|>"?"`            . +"!"""!+|+""!"!""~ .
+#
+#                                  _mWm,      <mmc
+#                                  -?V?`      "??`
+#
+#
+#
+#
+#
+#
+#             _ww,      aw;      sac        aw,  <ym.     uQW)  mQQQQQQQQm
+#             =QWQw,    dWc      QWm,.      dWc  -UWp.   <QW)   dQe
+#             =QWVQQc   dQc     QW QQa      dQc   -WQa  _WWe    dQc
+#             =Qm  WQw  dQc    mQS  QQa.    dQc     WWc.qQE     dQQQQQQQmm
+#             =Qm   ?QQadQc   qQQQQQWWQg,   dQc     {WQwQB      dQe
+#             =Qm    "$WQWc  uQW^     VWm,  dQc      9WWB       dQg
+#             =$B      ?QWc @$W^       YQE  mWc       TY        3VTYYYYYTY
+#
+
 
 import feedparser
 import string
@@ -54,14 +81,13 @@ def process(url):
 
 # Problem 1
 
-# TODO: NewsStory
 class NewsStory(object):
     def __init__(self,guid, title, description, link, pubdate):
         self.guid = guid
         self.title = title
         self.description = description
         self.link = link
-        self.pubdate = pubdate
+        self.pubdate = pubdate.replace(tzinfo=pytz.timezone("EST"))
 
     def get_guid(self):
         return self.guid
@@ -97,36 +123,94 @@ class Trigger(object):
 # PHRASE TRIGGERS
 
 # Problem 2
-# TODO: PhraseTrigger
+class PhraseTrigger(Trigger):
+    def __init__(self,phrase):
+        self.phrase = phrase.lower()
+
+    def is_phrase_in(self,text):
+        # replace punctuation with ' '
+        for char in string.punctuation:
+            text = text.replace(char, ' ')
+
+        def is_sublist(a,b):
+            if a == []: return True
+            if b == []: return False
+            return b[:len(a)] == a or is_sublist(a, b[1:])
+
+        return is_sublist(self.phrase.split(),text.lower().split())
 
 # Problem 3
-# TODO: TitleTrigger
+class TitleTrigger(PhraseTrigger):
+    def __init__(self,phrase):
+        super(TitleTrigger, self).__init__(phrase)
+
+    def evaluate(self,story):
+        return self.is_phrase_in(story.get_title())
+
 
 # Problem 4
-# TODO: DescriptionTrigger
+class DescriptionTrigger(PhraseTrigger):
+    def __init__(self,phrase):
+        super(DescriptionTrigger,self).__init__(phrase)
+
+    def evaluate(self,story):
+        return self.is_phrase_in(story.get_description())
 
 # TIME TRIGGERS
 
 # Problem 5
-# TODO: TimeTrigger
+class TimeTrigger(Trigger):
+
 # Constructor:
 #        Input: Time has to be in EST and in the format of "%d %b %Y %H:%M:%S".
 #        Convert time from string to a datetime before saving it as an attribute.
+    def __init__(self,triggertime):
+        dtime = datetime.strptime(triggertime, "%d %b %Y %H:%M:%S")
+        dtime = dtime.replace(tzinfo=pytz.timezone("EST"))
+        self.triggertime = dtime
 
 # Problem 6
-# TODO: BeforeTrigger and AfterTrigger
+class BeforeTrigger(TimeTrigger):
 
+    def __init__(self,triggertime):
+        super(BeforeTrigger,self).__init__(triggertime)
+
+    def evaluate(self, story):
+        return story.get_pubdate() < self.triggertime
+
+class AfterTrigger(TimeTrigger):
+    def __init__(self, triggertime):
+        super(AfterTrigger, self).__init__(triggertime)
+
+    def evaluate(self, story):
+        return story.get_pubdate() > self.triggertime
 
 # COMPOSITE TRIGGERS
 
 # Problem 7
-# TODO: NotTrigger
+class NotTrigger(Trigger):
+    def __init__(self,othertrigger):
+        self.othertrigger = othertrigger
+
+    def evaluate(self,story):
+        return not self.othertrigger.evaluate(story)
 
 # Problem 8
-# TODO: AndTrigger
+class AndTrigger(Trigger):
+    def __init__(self,othertrigger1,othertrigger2):
+        self.othertrigger1 = othertrigger1
+        self.othertrigger2 = othertrigger2
 
-# Problem 9
-# TODO: OrTrigger
+    def evaluate(self,story):
+        return self.othertrigger1.evaluate(story) and self.othertrigger2.evaluate(story)
+
+class OrTrigger(Trigger):
+    def __init__(self,othertrigger1,othertrigger2):
+        self.othertrigger1 = othertrigger1
+        self.othertrigger2 = othertrigger2
+
+    def evaluate(self,story):
+        return self.othertrigger1.evaluate(story) or self.othertrigger2.evaluate(story)
 
 
 #======================
@@ -140,10 +224,13 @@ def filter_stories(stories, triggerlist):
 
     Returns: a list of only the stories for which a trigger in triggerlist fires.
     """
-    # TODO: Problem 10
-    # This is a placeholder
-    # (we're just returning all the stories, with no filtering)
-    return stories
+    result = []
+    for story in stories:
+        for trigger in triggerlist:
+            if trigger.evaluate(story):
+                result.append(story)
+                break
+    return result
 
 
 
@@ -171,6 +258,9 @@ def read_trigger_config(filename):
     # line is the list of lines that you need to parse and for which you need
     # to build triggers
 
+    for item in lines:
+
+
     print(lines) # for now, print it so you see what it contains!
 
 
@@ -181,7 +271,7 @@ def main_thread(master):
     # A sample trigger list - you might need to change the phrases to correspond
     # to what is currently in the news
     try:
-        t1 = TitleTrigger("election")
+        t1 = TitleTrigger("machine lea")
         t2 = DescriptionTrigger("Trump")
         t3 = DescriptionTrigger("Clinton")
         t4 = AndTrigger(t2, t3)
