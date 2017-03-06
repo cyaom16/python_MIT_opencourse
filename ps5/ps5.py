@@ -254,16 +254,45 @@ def read_trigger_config(filename):
         if not (len(line) == 0 or line.startswith('//')):
             lines.append(line)
 
-    # TODO: Problem 11
     # line is the list of lines that you need to parse and for which you need
     # to build triggers
+    triggername = []
+    triggerval = []
+    toadd = []
+    for line in lines:
+        item = line.split(',')
+        if item[0] != "ADD":
+            triggername.append(item[0])
+            triggerval.append([item[1],item[2:]])
+        else:
+            toadd.extend(item[1:])
+    triggerdic = dict(zip(triggername,triggerval))
 
-    for item in lines:
+    def addtrigger(val):
+            if val[0] == "TITLE":
+                return TitleTrigger(val[1][0])
+            elif val[0] == "DESCRIPTION":
+                return DescriptionTrigger(val[1][0])
+            elif val[0] == "AFTER":
+                return AfterTrigger(val[1][0])
+            elif val[0] == "BEFORE":
+                return BeforeTrigger(val[1][0])
+            elif val[0] == "NOT":
+                return NotTrigger(val[1][0])
+            elif val[0] == "AND":
+                trigger1 = triggerdic[val[1][0]]
+                trigger2 = triggerdic[val[1][1]]
+                return AndTrigger(addtrigger(trigger1),addtrigger(trigger2))
+            elif val[0] == "OR":
+                trigger1 = triggerdic[val[1][0]]
+                trigger2 = triggerdic[val[1][1]]
+                return OrTrigger(addtrigger(trigger1),addtrigger(trigger2))
 
+    triggerlist = []
+    for item in toadd:
+        triggerlist.append(addtrigger(triggerdic[item]))
 
-    print(lines) # for now, print it so you see what it contains!
-
-
+    return triggerlist
 
 SLEEPTIME = 120 #seconds -- how often we poll
 
@@ -278,8 +307,7 @@ def main_thread(master):
         triggerlist = [t1, t4]
 
         # Problem 11
-        # TODO: After implementing read_trigger_config, uncomment this line 
-        # triggerlist = read_trigger_config('triggers.txt')
+        triggerlist = read_trigger_config('triggers.txt')
         
         # HELPER CODE - you don't need to understand this!
         # Draws the popup window that displays the filtered stories
